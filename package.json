@@ -1,0 +1,27 @@
+{
+  "name": "@pcplayground/openclaw-channel-telnyx-sms",
+  "version": "1.0.0",
+  "description": "Telnyx SMS/MMS channel extension for OpenClaw",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "openclaw": {
+    "extensions": { "channels": ["./dist/index.js"] },
+    "compat": { "pluginApi": "^1.0.0", "minGatewayVersion": "2.0.0" }
+  },
+  "keywords": ["openclaw", "openclaw-channel", "telnyx", "sms", "mms"],
+  "author": "Martin Rudolph <pcitalian@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pcplayground/openclaw-channel-telnyx-sms.git"
+  }
+}
