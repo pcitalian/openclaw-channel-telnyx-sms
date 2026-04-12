@@ -189,12 +189,12 @@ Run multiple phone numbers by adding an `accounts` section:
         "primary": {
           "phoneNumber": "+15551234567",
           "allowFrom": ["+15559876543"],
-          "name": "Raven Primary"
+          "name": "My Assistant Primary"
         },
         "family": {
           "phoneNumber": "+15551234568",
           "allowFrom": ["+15558765432", "+15557654321"],
-          "name": "Raven Family"
+          "name": "My Assistant Family"
         }
       }
     }
