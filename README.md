@@ -287,23 +287,6 @@ Set `channels.telnyx-sms.apiKey` in your openclaw.json.
 - Check `mediaMaxMb` — default is 1MB, Telnyx max is 1MB per file
 - Ensure your OpenClaw instance has outbound internet access
 
-## Migrating from n8n Bridge
-
-If you're currently using an n8n workflow to bridge Telnyx SMS to OpenClaw's `/v1/chat/completions` endpoint, this native channel replaces that setup:
-
-1. Install this extension
-2. Add the `telnyx-sms` channel config to openclaw.json
-3. Update the Telnyx webhook URL from n8n to OpenClaw directly
-4. Disable the n8n workflow
-5. The extension handles the 2-second webhook ACK requirement natively
-
-Benefits over the n8n bridge:
-- Native session management (no manual `user` field mapping)
-- Proper allowlist/pairing support
-- Webhook signature verification
-- MMS media handling
-- Status monitoring in the OpenClaw portal
-
 ## Contributing
 
 PRs welcome! This project follows the OpenClaw channel plugin patterns established by the Signal and Telegram extensions.
