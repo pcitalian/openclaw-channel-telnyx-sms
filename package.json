@@ -5,7 +5,11 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -14,10 +18,26 @@
     "prepublishOnly": "npm run build"
   },
   "openclaw": {
-    "extensions": { "channels": ["./dist/index.js"] },
-    "compat": { "pluginApi": "^1.0.0", "minGatewayVersion": "2025.12" }
+    "extensions": {
+      "channels": [
+        "./dist/index.js"
+      ]
+    },
+    "compat": {
+      "pluginApi": "^1.0.0",
+      "minGatewayVersion": "2025.12"
+    },
+    "build": {
+      "openclawVersion": "2026.4.2"
+    }
   },
-  "keywords": ["openclaw", "openclaw-channel", "telnyx", "sms", "mms"],
+  "keywords": [
+    "openclaw",
+    "openclaw-channel",
+    "telnyx",
+    "sms",
+    "mms"
+  ],
   "author": "Martin Rudolph <pcitalian@gmail.com>",
   "license": "MIT",
   "repository": {
