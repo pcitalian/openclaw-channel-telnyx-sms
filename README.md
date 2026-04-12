@@ -19,7 +19,7 @@ Telnyx SMS/MMS channel extension for [OpenClaw](https://openclaw.ai) — give yo
 
 ## Prerequisites
 
-- [OpenClaw](https://openclaw.ai) v2.0.0 or later
+- [OpenClaw](https://openclaw.ai) 2025.12 or later
 - A [Telnyx](https://telnyx.com) account with:
   - An API v2 key
   - A phone number with SMS/MMS enabled

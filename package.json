@@ -15,7 +15,7 @@
   },
   "openclaw": {
     "extensions": { "channels": ["./dist/index.js"] },
-    "compat": { "pluginApi": "^1.0.0", "minGatewayVersion": "2.0.0" }
+    "compat": { "pluginApi": "^1.0.0", "minGatewayVersion": "2025.12" }
   },
   "keywords": ["openclaw", "openclaw-channel", "telnyx", "sms", "mms"],
   "author": "Martin Rudolph <pcitalian@gmail.com>",
