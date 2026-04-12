@@ -1,6 +1,6 @@
 {
   "name": "@pcplayground/openclaw-channel-telnyx-sms",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Telnyx SMS/MMS channel extension for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
@@ -22,6 +22,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pcplayground/openclaw-channel-telnyx-sms.git"
+    "url": "https://github.com/pcitalian/openclaw-channel-telnyx-sms.git"
   }
 }

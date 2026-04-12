@@ -5,8 +5,8 @@
  * single-account (top-level fields) and multi-account (accounts map) layouts.
  */
 
-import { normalizeE164 } from "openclaw/plugin-sdk/text-runtime";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import { normalizeE164 } from "./normalize.js";
 import type { ResolvedTelnyxSmsAccount, TelnyxSmsAccountConfig } from "./types.js";
 
 const DEFAULT_ACCOUNT_ID = "default";
@@ -15,6 +15,7 @@ const CHANNEL_KEY = "telnyx-sms";
 type ChannelSection = NonNullable<NonNullable<OpenClawConfig["channels"]>[typeof CHANNEL_KEY]>;
 
 function getChannelSection(cfg: OpenClawConfig): ChannelSection | undefined {
+  if (!cfg) return undefined;
   return cfg.channels?.[CHANNEL_KEY] as ChannelSection | undefined;
 }
 
@@ -23,8 +24,8 @@ function getChannelSection(cfg: OpenClawConfig): ChannelSection | undefined {
  * no named accounts and top-level fields are present.
  */
 export function listTelnyxSmsAccountIds(cfg: OpenClawConfig): string[] {
-  const section = getChannelSection(cfg);
-  if (!section) return [];
+  if (!cfg) return [];
+  const section = getChannelSection(cfg);  if (!section) return [];
 
   const accounts = (section as Record<string, unknown>).accounts as
     | Record<string, unknown>
@@ -36,48 +37,62 @@ export function listTelnyxSmsAccountIds(cfg: OpenClawConfig): string[] {
     if (ids.length > 0) return ids;
   }
 
-  // Fall back to top-level single-account config
-  if ((section as Record<string, unknown>).apiKey || (section as Record<string, unknown>).phoneNumber) {
+  // Fall back to top-level single-account config (check both config fields and env vars)
+  if (
+    (section as Record<string, unknown>).apiKey ||
+    (section as Record<string, unknown>).phoneNumber ||
+    process.env.TELNYX_API_KEY ||
+    process.env.TELNYX_FROM_NUMBER
+  ) {
     return [DEFAULT_ACCOUNT_ID];
   }
 
   return [];
 }
 
-/** Resolve account ID when none is specified — returns the first available. */
+/** Resolve account ID when none is specified. */
 export function resolveDefaultTelnyxSmsAccountId(cfg: OpenClawConfig): string {
   const ids = listTelnyxSmsAccountIds(cfg);
   return ids[0] ?? DEFAULT_ACCOUNT_ID;
 }
-
 /** Resolve a fully-populated account from config. */
 export function resolveTelnyxSmsAccount(params: {
   cfg: OpenClawConfig;
-  accountId?: string;
+  accountId?: string | null;
 }): ResolvedTelnyxSmsAccount {
   const { cfg } = params;
   const accountId = (params.accountId ?? "").trim() || resolveDefaultTelnyxSmsAccountId(cfg);
   const section = getChannelSection(cfg);
 
-  // Determine the raw config object for this account
   let raw: Record<string, unknown> = {};
   if (section) {
     const accounts = (section as Record<string, unknown>).accounts as
       | Record<string, Record<string, unknown>>
       | undefined;
     if (accounts && accountId !== DEFAULT_ACCOUNT_ID && accounts[accountId]) {
-      // Merge top-level defaults with account-specific overrides
       raw = { ...stripAccountsKey(section as Record<string, unknown>), ...accounts[accountId] };
     } else {
       raw = stripAccountsKey(section as Record<string, unknown>);
     }
   }
 
+  // Support env-var fallbacks for API key and phone number
+  const apiKey = String(raw.apiKey ?? process.env.TELNYX_API_KEY ?? "");
+  const phoneNumber =
+    normalizeE164(String(raw.phoneNumber ?? process.env.TELNYX_FROM_NUMBER ?? "")) ??
+    String(raw.phoneNumber ?? process.env.TELNYX_FROM_NUMBER ?? "");
   const config: TelnyxSmsAccountConfig = {
-    apiKey: String(raw.apiKey ?? ""),
-    phoneNumber: normalizeE164(String(raw.phoneNumber ?? "")) ?? String(raw.phoneNumber ?? ""),
-    messagingProfileId: raw.messagingProfileId ? String(raw.messagingProfileId) : undefined,
-    webhookPublicKey: raw.webhookPublicKey ? String(raw.webhookPublicKey) : undefined,
+    apiKey,
+    phoneNumber,
+    messagingProfileId: String(
+      raw.messagingProfileId ?? process.env.TELNYX_MESSAGING_PROFILE_ID ?? "",
+    ).trim() || undefined,
+    webhookPublicKey: String(
+      raw.webhookPublicKey ?? process.env.TELNYX_PUBLIC_KEY ?? "",
+    ).trim() || undefined,
+    webhookPort: typeof raw.webhookPort === "number" ? raw.webhookPort : undefined,
+    webhookHost: raw.webhookHost ? String(raw.webhookHost) : undefined,
+    webhookPath: raw.webhookPath ? String(raw.webhookPath) : undefined,
     dmPolicy: parseDmPolicy(raw.dmPolicy),
     allowFrom: parseAllowFrom(raw.allowFrom),
     defaultTo: raw.defaultTo ? String(raw.defaultTo) : undefined,
@@ -99,7 +114,6 @@ export function resolveTelnyxSmsAccount(params: {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
-
 function stripAccountsKey(obj: Record<string, unknown>): Record<string, unknown> {
   const { accounts: _accounts, ...rest } = obj;
   return rest;

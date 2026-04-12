@@ -2,15 +2,20 @@
 
 Telnyx SMS/MMS channel extension for [OpenClaw](https://openclaw.ai) — give your AI assistant a real phone number for text messaging.
 
+> **Built with AI.** This extension was developed by [Claude](https://claude.ai) (Anthropic) with human testing, verification, and direction by [Martin Rudolph](https://github.com/pcitalian). If you have questions, ideas, or want to share how you're using it, head over to [Discussions](https://github.com/pcitalian/openclaw-channel-telnyx-sms/discussions).
+
 ## Features
 
 - **Inbound SMS/MMS** — receive text messages and media via Telnyx webhooks
 - **Outbound SMS/MMS** — send replies as standard text messages (with optional MMS media)
 - **Ed25519 webhook verification** — validates Telnyx webhook signatures for security
-- **Allowlist access control** — restrict which phone numbers can message your assistant
+- **Allowlist access control** — restrict which phone numbers can message your assistant via the OpenClaw console UI
+- **Unknown sender gate** — when someone not on the allowlist texts, optionally notify an admin via another channel (Discord, WhatsApp, etc.) with approve/deny
+- **Event log** — in-memory ring buffer tracking the last 20 send/receive events with status codes, visible in the console status panel
 - **Multi-account support** — run multiple phone numbers from a single OpenClaw instance
 - **Session continuity** — each phone number gets its own conversation thread
 - **MMS media handling** — inbound images/files are downloaded and passed to the agent
+- **Console UI integration** — full config schema with `channelConfigs` so all settings (allowlist, DM policy, chunk limits, gate notifications) render natively in the OpenClaw console
 
 ## Prerequisites
 
@@ -113,6 +118,21 @@ Add the channel to your `openclaw.json`:
         "+15558765432"
       ],
 
+      // Message handling
+      "textChunkLimit": 1500,
+      "blockStreaming": true,
+      "chunkMode": "length",
+      "historyLimit": 15,
+
+      // Unknown sender gate (optional)
+      "gateNotify": {
+        "enabled": true,
+        "notifyChannel": "discord",
+        "notifyTarget": "admin-alerts",
+        "rejectReply": "This number is not authorized. Your message has been forwarded for review.",
+        "cooldownMinutes": 60
+      },
+
       // Optional
       "mediaMaxMb": 1,
       "name": "Raven SMS"
@@ -129,12 +149,29 @@ Add the channel to your `openclaw.json`:
 | `phoneNumber` | string | Yes | — | Your Telnyx number in E.164 format |
 | `messagingProfileId` | string | No | — | Messaging Profile ID from Telnyx portal |
 | `webhookPublicKey` | string | No | — | Ed25519 public key for webhook verification |
-| `dmPolicy` | string | No | `"allowlist"` | Access policy: `"open"`, `"allowlist"`, `"pairing"`, `"disabled"` |
-| `allowFrom` | string[] | No | `[]` | E.164 numbers allowed to message (for allowlist policy) |
-| `defaultTo` | string | No | — | Default outbound recipient |
-| `mediaMaxMb` | number | No | `1` | Max MMS media size in MB (Telnyx limit: 1MB/file) |
+| `dmPolicy` | string | No | `"allowlist"` | Access policy: `"open"`, `"allowlist"`, `"disabled"` |
+| `allowFrom` | string[] | No | `[]` | E.164 numbers allowed to message (use `["*"]` to allow all) |
+| `historyLimit` | integer | No | `15` | Number of past messages loaded into conversation context |
+| `blockStreaming` | boolean | No | `true` | Buffer full AI response before sending (recommended for SMS) |
+| `chunkMode` | string | No | `"length"` | How to split long messages: `"length"` or `"newline"` |
+| `textChunkLimit` | integer | No | `1500` | Max chars per outbound SMS (Telnyx 10-part limit = ~1530) |
+| `mediaMaxMb` | integer | No | `1` | Max MMS media size in MB (Telnyx limit: 1MB/file) |
+| `webhookPort` | integer | No | `8788` | HTTP port for the inbound webhook server |
+| `webhookPath` | string | No | `"/telnyx-sms-webhook"` | URL path for the Telnyx webhook endpoint |
 | `enabled` | boolean | No | `true` | Enable/disable this channel |
 | `name` | string | No | — | Display name in OpenClaw portal |
+
+### Gate Notify (Unknown Sender Alerts)
+
+When `dmPolicy` is `"allowlist"` and someone not on the list texts your number, the gate system can notify you via another configured channel instead of silently dropping the message.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `gateNotify.enabled` | boolean | `false` | Enable gate notifications |
+| `gateNotify.notifyChannel` | string | — | Channel to send alerts (e.g. `"discord"`, `"whatsapp"`) |
+| `gateNotify.notifyTarget` | string | — | Target peer/user on the notify channel |
+| `gateNotify.rejectReply` | string | — | Auto-reply to rejected sender (empty = no reply) |
+| `gateNotify.cooldownMinutes` | integer | `60` | Minutes before re-notifying about same number |
 
 ### Multi-Account Setup
 
@@ -209,7 +246,7 @@ Run multiple phone numbers by adding an `accounts` section:
 **Outbound (sending messages):**
 
 1. The AI agent decides to send a message
-2. Long messages are chunked into SMS-friendly segments (~1600 chars)
+2. Long messages are chunked into SMS-friendly segments (~1500 chars, respecting Telnyx's 10-part concatenated SMS limit)
 3. Each chunk is sent via Telnyx POST /v2/messages
 4. MMS media URLs are included when the agent sends images/files
 
@@ -272,12 +309,18 @@ Benefits over the n8n bridge:
 PRs welcome! This project follows the OpenClaw channel plugin patterns established by the Signal and Telegram extensions.
 
 ```bash
-git clone https://github.com/pcplayground/openclaw-channel-telnyx-sms.git
+git clone https://github.com/pcitalian/openclaw-channel-telnyx-sms.git
 cd openclaw-channel-telnyx-sms
 npm install
 npm run build
 npm test
 ```
+
+For questions, ideas, or to share your setup, use [GitHub Discussions](https://github.com/pcitalian/openclaw-channel-telnyx-sms/discussions) rather than Issues — Issues are for bugs and concrete feature requests.
+
+## Credits
+
+This extension was developed by [Claude](https://claude.ai) (Anthropic's AI assistant) with human testing, verification, and direction by [Martin Rudolph](https://github.com/pcitalian). The architecture, code, documentation, and console UI integration were all produced through collaborative AI-human development.
 
 ## License
 

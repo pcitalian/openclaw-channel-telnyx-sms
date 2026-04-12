@@ -1,0 +1,108 @@
+{
+  "id": "telnyx-sms",
+  "channels": ["telnyx-sms"],
+  "channelConfigs": {
+    "telnyx-sms": {
+      "label": "Telnyx SMS",
+      "description": "SMS/MMS messaging via Telnyx",
+      "schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Enable or disable the Telnyx SMS channel"
+          },
+          "dmPolicy": {
+            "type": "string",
+            "description": "DM policy: allowlist, open, or disabled",
+            "default": "allowlist",
+            "enum": ["allowlist", "open", "disabled"]
+          },
+          "allowFrom": {
+            "type": "array",
+            "description": "Phone numbers allowed to message (E.164 format). Use \"*\" to allow all. Only applies when dmPolicy is \"allowlist\".",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "historyLimit": {
+            "type": "integer",
+            "description": "Number of past messages loaded into conversation context",
+            "minimum": 0,
+            "default": 15
+          },
+          "blockStreaming": {
+            "type": "boolean",
+            "description": "Buffer the full AI response before sending as SMS (recommended for SMS to avoid partial sends)",
+            "default": true
+          },
+          "chunkMode": {
+            "type": "string",
+            "description": "How to split long messages into SMS parts",
+            "enum": ["length", "newline"],
+            "default": "length"
+          },
+          "textChunkLimit": {
+            "type": "integer",
+            "description": "Max characters per outbound SMS (Telnyx 10-part limit = 1500)",
+            "minimum": 1,
+            "default": 1500
+          },
+          "mediaMaxMb": {
+            "type": "integer",
+            "description": "Max MMS media size in MB",
+            "minimum": 1,
+            "default": 1
+          },
+          "webhookPort": {
+            "type": "integer",
+            "description": "HTTP port for the inbound webhook server",
+            "default": 8788
+          },
+          "webhookPath": {
+            "type": "string",
+            "description": "URL path for the Telnyx webhook endpoint",
+            "default": "/telnyx-sms-webhook"
+          },
+          "gateNotify": {
+            "type": "object",
+            "description": "Notify admin when unknown numbers text. Sends alert via another configured channel.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable gate notifications for unknown senders",
+                "default": false
+              },
+              "notifyChannel": {
+                "type": "string",
+                "description": "Channel to send admin alerts (e.g. discord, whatsapp)"
+              },
+              "notifyTarget": {
+                "type": "string",
+                "description": "Target peer/user on the notify channel"
+              },
+              "rejectReply": {
+                "type": "string",
+                "description": "Auto-reply message sent to rejected senders (leave empty for no reply)"
+              },
+              "cooldownMinutes": {
+                "type": "integer",
+                "description": "Minutes to wait before re-notifying about same number",
+                "minimum": 1,
+                "default": 60
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
