@@ -115,6 +115,9 @@ export const telnyxSmsPlugin = createChatChannelPlugin<ResolvedTelnyxSmsAccount>
       chunker: chunkText,
       chunkerMode: "text",
       textChunkLimit: SMS_CHUNK_LIMIT,
+      // Retained for backward compatibility with OpenClaw < 2026.4.14.
+      // In newer versions these are treated as optional wrappers; the primary
+      // methods now live under `attachedResults` below.
       sendFormattedText: async ({ cfg, to, text, accountId, abortSignal }) => {
         abortSignal?.throwIfAborted();
         const limit =
@@ -136,6 +139,37 @@ export const telnyxSmsPlugin = createChatChannelPlugin<ResolvedTelnyxSmsAccount>
       },
       sendFormattedMedia: async ({ cfg, to, text, mediaUrl, accountId, abortSignal }) => {
         abortSignal?.throwIfAborted();
+        return await sendSmsTelnyx(to, text, {
+          cfg,
+          accountId: accountId ?? undefined,
+          mediaUrl: mediaUrl ?? undefined,
+        });
+      },
+    },
+    // Required for OpenClaw >= 2026.4.14. The outbound handler in
+    // `deliver.*.js` expects `outbound.sendText` to exist — the SDK adapter
+    // maps `attachedResults.sendText` onto that field. Without this block,
+    // outbound sends fail with `Outbound not configured for channel: telnyx-sms`.
+    attachedResults: {
+      channel: CHANNEL_ID,
+      sendText: async ({ cfg, to, text, accountId }) => {
+        const limit =
+          resolveTextChunkLimit(cfg, CHANNEL_ID, accountId ?? undefined, {
+            fallbackLimit: SMS_CHUNK_LIMIT,
+          }) ?? SMS_CHUNK_LIMIT;
+
+        const chunks = chunkText(text, limit);
+        const results = [];
+        for (const chunk of chunks) {
+          const result = await sendSmsTelnyx(to, chunk, {
+            cfg,
+            accountId: accountId ?? undefined,
+          });
+          results.push(result);
+        }
+        return results;
+      },
+      sendMedia: async ({ cfg, to, text, mediaUrl, accountId }) => {
         return await sendSmsTelnyx(to, text, {
           cfg,
           accountId: accountId ?? undefined,

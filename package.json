@@ -1,6 +1,6 @@
 {
   "name": "openclaw-channel-telnyx-sms",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Telnyx SMS/MMS channel extension for OpenClaw",
   "type": "module",
   "main": "dist/index.js",
@@ -8,6 +8,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
@@ -26,7 +27,7 @@
       "minGatewayVersion": "2025.12"
     },
     "build": {
-      "openclawVersion": "2026.4.2"
+      "openclawVersion": "2026.4.14"
     }
   },
   "keywords": [

@@ -20,6 +20,7 @@ Telnyx SMS/MMS channel extension for [OpenClaw](https://openclaw.ai) — give yo
 ## Prerequisites
 
 - [OpenClaw](https://openclaw.ai) 2025.12 or later
+  - **OpenClaw 2026.4.14+ requires plugin v1.2.0 or later.** Earlier plugin versions will load, receive inbound SMS, and appear healthy, but outbound sends will fail with `Outbound not configured for channel: telnyx-sms`. See [CHANGELOG](./CHANGELOG.md#120--2026-04-14) for details.
 - A [Telnyx](https://telnyx.com) account with:
   - An API v2 key
   - A phone number with SMS/MMS enabled
