@@ -1,6 +1,14 @@
 {
   "id": "telnyx-sms",
   "channels": ["telnyx-sms"],
+  "channelEnvVars": {
+    "telnyx-sms": [
+      "TELNYX_API_KEY",
+      "TELNYX_FROM_NUMBER",
+      "TELNYX_PUBLIC_KEY",
+      "TELNYX_MESSAGING_PROFILE_ID"
+    ]
+  },
   "channelConfigs": {
     "telnyx-sms": {
       "label": "Telnyx SMS",
