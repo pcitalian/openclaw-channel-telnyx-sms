@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-04-14
+
+### Security
+
+- **SSRF defense on MMS media downloads.** Inbound webhooks carry a `media.url` pointing to the media file on Telnyx's CDN. Prior versions fetched that URL without validating it — a compromised Telnyx account or an unsigned webhook could have induced the plugin to fetch arbitrary URLs (internal services, cloud metadata endpoints, etc.). New `src/media-url-policy.ts` enforces: HTTPS only, hostname must end in `.telnyx.com`, private/loopback/link-local IP literals rejected. Rejected URLs are logged and recorded to the event log with `status: "dropped"`.
+
+- **Fail-closed Ed25519 verification.** Prior versions silently accepted webhooks when the public key or signature/timestamp headers were missing. This release rejects all webhooks with HTTP 401 if:
+  - `webhookPublicKey` is not configured (via `channels.telnyx-sms.webhookPublicKey` or the `TELNYX_PUBLIC_KEY` env var), or
+  - `telnyx-signature-ed25519` / `telnyx-timestamp` headers are absent, or
+  - signature verification fails.
+
+  **Potentially breaking** for deployments that ran without a public key — you must now set one. If a Cloudflare Tunnel or other proxy is stripping the signature headers, configure it to preserve them rather than disabling plugin verification.
+
+### Verified against
+
+- OpenClaw 2026.4.14 (live regression: outbound SMS still delivers with Telnyx messageId; unit tests on URL policy; fail-closed 401 confirmed by removing the public key env var)
+
 ## [1.2.0] — 2026-04-14
 
 ### Fixed

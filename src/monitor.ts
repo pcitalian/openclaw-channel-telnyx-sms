@@ -37,6 +37,7 @@ import {
 import { resolveTelnyxSmsAccount } from "./accounts.js";
 import { smsEventLog } from "./event-log.js";
 import { handleUnknownSenderGate } from "./gate-notify.js";
+import { validateMediaUrl } from "./media-url-policy.js";
 import { normalizeE164, normalizeSmsMessagingTarget } from "./normalize.js";
 import { sendSmsTelnyx } from "./send.js";
 import type { TelnyxWebhookEvent, TelnyxMessagePayload } from "./types.js";
@@ -151,6 +152,25 @@ async function handleInboundSms(params: {
       if (!media.url) continue;
       if (media.size && media.size > maxBytes) {
         runtime.error?.(`telnyx-sms: media ${media.content_type} exceeds ${account.config.mediaMaxMb ?? 1}MB limit`);
+        continue;
+      }
+      // SSRF gate: reject any media URL that isn't a Telnyx HTTPS host.
+      // See src/media-url-policy.ts for the full policy.
+      const policy = validateMediaUrl(media.url);
+      if (!policy.ok) {
+        // Truncate the URL in the log to bound log line length and avoid
+        // dumping attacker-controlled junk. The reason already carries the
+        // useful bits (scheme / host).
+        const truncUrl = media.url.slice(0, 200);
+        runtime.error?.(
+          `telnyx-sms: refusing media fetch — ${policy.reason} [url=${truncUrl}]`,
+        );
+        smsEventLog.record({
+          direction: "inbound",
+          phoneNumber: senderPhone,
+          status: "dropped",
+          dropReason: `media URL rejected: ${policy.reason}`,
+        });
         continue;
       }
       try {
@@ -507,21 +527,46 @@ export async function monitorTelnyxSmsProvider(opts: MonitorTelnyxSmsOpts = {}):
         return;
       }
 
-      // Verify Ed25519 signature (only if headers are present — Cloudflare tunnel may strip them)
+      // Verify Ed25519 signature. As of v1.3.0 this is fail-closed:
+      //  - No webhookPublicKey configured -> reject all requests
+      //  - Missing or invalid signature/timestamp headers -> reject
+      //  - Valid signature -> accept
+      //
+      // Prior versions silently accepted webhooks when the key or headers
+      // were absent, which was an auth-bypass. If a legitimate deployment
+      // was relying on the old behavior (e.g. tests hitting the webhook
+      // directly), set `channels.telnyx-sms.webhookPublicKey` or the
+      // `TELNYX_PUBLIC_KEY` env var to the Messaging Profile's public key.
       const sigHeader = (req.headers["telnyx-signature-ed25519"] as string) ?? "";
       const tsHeader = (req.headers["telnyx-timestamp"] as string) ?? "";
-      if (account.config.webhookPublicKey && sigHeader && tsHeader) {
-        const result = verifyTelnyxWebhook({
-          rawBody,
-          signature: sigHeader,
-          timestamp: tsHeader,
-          publicKey: account.config.webhookPublicKey,
-        });
-        if (!result.valid) {
-          runtime.error?.(`telnyx-sms: webhook signature invalid: ${result.reason}`);
-          respondText(401, "invalid signature");
-          return;
-        }
+
+      if (!account.config.webhookPublicKey) {
+        runtime.error?.(
+          "telnyx-sms: webhook public key not configured — rejecting all webhooks. " +
+            "Set channels.telnyx-sms.webhookPublicKey or the TELNYX_PUBLIC_KEY env var.",
+        );
+        respondText(401, "webhook public key not configured");
+        return;
+      }
+
+      if (!sigHeader || !tsHeader) {
+        runtime.error?.(
+          "telnyx-sms: webhook missing signature/timestamp headers — rejecting",
+        );
+        respondText(401, "missing signature headers");
+        return;
+      }
+
+      const result = verifyTelnyxWebhook({
+        rawBody,
+        signature: sigHeader,
+        timestamp: tsHeader,
+        publicKey: account.config.webhookPublicKey,
+      });
+      if (!result.valid) {
+        runtime.error?.(`telnyx-sms: webhook signature invalid: ${result.reason}`);
+        respondText(401, "invalid signature");
+        return;
       }
 
       // Parse the event
